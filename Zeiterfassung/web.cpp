@@ -170,6 +170,13 @@ void handleAdd() {
   sendJson("{\"ok\":true}");
 }
 
+void handleReset() {
+  if (server.arg("confirm") != "1") return server.send(400, "text/plain", "Best\xC3\xA4tigung fehlt");
+  if (!storage::clearAll()) return server.send(500, "text/plain", "Speicherfehler");
+  app::dataReset();
+  sendJson("{\"ok\":true}");
+}
+
 void handleNotFound() {
   if (captiveRedirect()) return;
   server.send(404, "text/plain", "Nicht gefunden");
@@ -187,6 +194,7 @@ void begin() {
   server.on("/api/settime", HTTP_POST, handleSetTime);
   server.on("/api/delete", HTTP_POST, handleDelete);
   server.on("/api/add", HTTP_POST, handleAdd);
+  server.on("/api/reset", HTTP_POST, handleReset);
   server.on("/export.xlsx", HTTP_GET, handleXlsx);
   server.on("/export.csv", HTTP_GET, handleCsv);
   // Erkennungs-URLs von Android/iOS/Windows -> Portal öffnen

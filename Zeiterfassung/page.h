@@ -70,6 +70,11 @@ form label{font-size:13px;color:var(--mut)}input{font:inherit;width:100%;padding
  <p class="hint">Falls der Download im automatisch geöffneten Fenster nicht startet: im Browser
  <b>http://192.168.4.1</b> öffnen.</p>
 </div>
+<div class="card"><h2>Zurücksetzen</h2>
+ <p class="hint" style="margin-top:0">Löscht <b>alle</b> erfassten Zeiten und beendet eine laufende Erfassung.
+ Vorher am besten „Excel – alles“ herunterladen.</p>
+ <button id="reset" style="background:var(--stop)">Alle Daten löschen</button>
+</div>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -111,6 +116,10 @@ async function loadMonth(){
 }
 async function refresh(){try{await loadStatus();await loadMonth()}catch(e){console.log(e)}}
 $('toggle').onclick=async()=>{try{await api('/api/toggle',{method:'POST'})}catch(e){alert(e.message)}refresh()};
+$('reset').onclick=async()=>{
+ if(!confirm('Wirklich ALLE erfassten Zeiten löschen?'))return;
+ if(prompt('Zur Sicherheit bitte LÖSCHEN eintippen:')!=='LÖSCHEN')return alert('Abgebrochen – nichts gelöscht.');
+ try{await api('/api/reset?confirm=1',{method:'POST'});alert('Alle Daten gelöscht.')}catch(e){alert(e.message)}refresh()};
 $('prev').onclick=()=>{if(--cm<1){cm=12;cy--}loadMonth()};
 $('next').onclick=()=>{if(++cm>12){cm=1;cy++}loadMonth()};
 $('add').onsubmit=async e=>{e.preventDefault();

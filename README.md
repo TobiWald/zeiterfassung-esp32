@@ -54,6 +54,10 @@ Monatsübersicht mit Wochen und Tagen, alle Einträge (löschbar),
   *Einträge*, *Tage*, *Wochen*, *Monate* inkl. Summen)
 * **CSV – Monat** (Semikolon, deutsches Zahlenformat)
 
+Ganz unten: **Alle Daten löschen** (Reset). Löscht alle Einträge und beendet
+eine laufende Erfassung – mit doppelter Sicherheitsabfrage (Eingabe von
+„LÖSCHEN“). Vorher am besten „Excel – alles“ herunterladen.
+
 ## Flashen der fertigen Firmware
 
 Die kombinierte Datei `zeiterfassung_combined_0x0.bin` enthält Bootloader,

@@ -126,6 +126,10 @@ void dailyTimeSync() {
 namespace app {
 void toggleTracking() { toggle(true); }
 void requestRedraw() { ui::requestRedraw(); }
+void dataReset() {
+  hw::setLedBlink(false);
+  ui::showMessage("Alle Daten\ngel\xC3\xB6scht", 4000);
+}
 float batteryVoltage() { return batV; }
 int batteryPercent() { return batPct; }
 }

@@ -18,6 +18,7 @@ void stop(uint32_t now);  // beendet laufende Sitzung und speichert sie
 
 bool addSession(uint32_t start, uint32_t end);
 bool deleteSession(uint32_t start);
+bool clearAll();  // alle Einträge löschen, laufende Erfassung beenden
 
 // Gearbeitete Sekunden im Intervall [from, to), inkl. laufender Sitzung
 uint32_t workedBetween(uint32_t from, uint32_t to, uint32_t now);

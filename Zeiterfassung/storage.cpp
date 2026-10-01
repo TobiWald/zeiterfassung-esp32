@@ -92,6 +92,13 @@ bool deleteSession(uint32_t start) {
   return save();
 }
 
+bool clearAll() {
+  list.clear();
+  runStart = 0;
+  prefs.putUInt("run", 0);
+  return save();
+}
+
 uint32_t workedBetween(uint32_t from, uint32_t to, uint32_t now) {
   uint32_t sum = 0;
   for (const auto &s : list) {
