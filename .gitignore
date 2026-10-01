@@ -1,0 +1,4 @@
+Zeiterfassung/secrets.h
+build/
+release/
+test/host/out/
