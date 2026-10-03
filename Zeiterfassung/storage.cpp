@@ -78,6 +78,18 @@ void stop(uint32_t now) {
   prefs.putUInt("run", 0);
 }
 
+void setRunningSince(uint32_t start) {
+  if (!runStart || !start) return;
+  runStart = start;
+  prefs.putUInt("run", runStart);
+}
+
+uint32_t lastEnd() {
+  uint32_t e = 0;
+  for (const auto &s : list) e = s.end > e ? s.end : e;
+  return e;
+}
+
 bool addSession(uint32_t start, uint32_t end) {
   if (end <= start) return false;
   list.push_back({start, end});

@@ -199,9 +199,10 @@ void drawMain() {
   uint32_t now = nowEpoch();
   if (run) {
     uint32_t since = storage::runningSince();
-    text(F24, 100, 120, timeutil::fmtDuration(now > since ? now - since : 0), CENTER);
-    text(F12, 100, 147, "seit " + timeutil::fmtClock(since), CENTER);
-    hline(156);
+    text(F24, 100, 113, timeutil::fmtDuration(now > since ? now - since : 0), CENTER);
+    text(F12, 100, 136, "seit " + timeutil::fmtClock(since), CENTER);
+    text(F9, 100, 152, "PWR = +1 Min", CENTER);
+    hline(158);
     labelValue(178, "Heute", timeutil::fmtDuration(workedToday(now)));
     labelValue(198, "Woche", timeutil::fmtDuration(workedWeek(now)));
   } else {

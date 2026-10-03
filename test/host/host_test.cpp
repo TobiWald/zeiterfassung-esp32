@@ -50,6 +50,11 @@ int main() {
   ui::showMessage("Hotspot aus\nin 15 s\n\nPWR kurz dr\xC3\xBC" "cken\n= +2 Minuten"); ui::drawNow(); dump("9e_msg_apwarn");
   ui::showMessage("Hotspot\n+2 Minuten"); ui::drawNow(); dump("9f_msg_apext");
   ui::showMessage("AUS\n(Stromsparen)\n\nZum Einschalten\nPWR dr\xC3\xBC" "cken"); ui::drawNow(); dump("9g_msg_autooff");
+  ui::showMessage("GESTARTET\n08:15\n\nZu sp\xC3\xA4t gestartet?\nPWR = +1 Minute"); ui::drawNow(); dump("9h_msg_start2");
+  ui::showMessage("+5 Min\nStart jetzt\n08:10"); ui::drawNow(); dump("9i_msg_plus");
+  ui::showMessage("Gestoppt: 4:18\n\nL\xC3\xB6schen?\nPWR 1x\nnoch 5 s"); ui::drawNow(); dump("9j_msg_undo");
+  ui::showMessage("Wirklich\nl\xC3\xB6schen?\n\nJA = PWR 2x\nNEIN = warten (5)"); ui::drawNow(); dump("9k_msg_confirm");
+  ui::showMessage("GEL\xC3\x96SCHT"); ui::drawNow(); dump("9l_msg_deleted");
   ui::clearMessage();
 
   struct tm lt = timeutil::local(now);

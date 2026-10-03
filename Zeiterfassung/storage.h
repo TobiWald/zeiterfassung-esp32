@@ -15,6 +15,8 @@ bool running();
 uint32_t runningSince();
 void start(uint32_t now);
 void stop(uint32_t now);  // beendet laufende Sitzung und speichert sie
+void setRunningSince(uint32_t start);  // Startzeit der laufenden Sitzung ändern
+uint32_t lastEnd();                    // Ende des letzten gespeicherten Eintrags (0 = keiner)
 
 bool addSession(uint32_t start, uint32_t end);
 bool deleteSession(uint32_t start);

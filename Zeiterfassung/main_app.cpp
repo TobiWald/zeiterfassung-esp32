@@ -24,6 +24,18 @@ bool apWarning = false;     // Vorwarnung läuft
 uint32_t apWarnUntil = 0;
 int apWarnShown = -1;       // angezeigter Countdown-Wert
 
+// Nach dem Stoppen: 5 s Zeit, den Eintrag per PWR wieder zu löschen
+enum UndoState { UNDO_NONE, UNDO_OFFER, UNDO_CONFIRM };
+UndoState undoState = UNDO_NONE;
+uint32_t undoUntil = 0;
+uint32_t undoStart = 0;     // Start des gerade gespeicherten Eintrags
+uint32_t undoDur = 0;
+int undoShown = -1;
+
+// Während der Erfassung: PWR = Start 1 Minute früher
+uint32_t addedTotal = 0;    // Summe der Minuten in der aktuellen Meldung
+uint32_t addedAt = 0;
+
 void readBattery() {
   batV = hw::batteryVoltage();
   batPct = hw::batteryPercent(batV);
@@ -38,14 +50,25 @@ uint32_t workedToday(uint32_t now) {
 void toggle(bool fromWeb) {
   uint32_t now = timeutil::now();
   if (storage::running()) {
-    uint32_t dur = now - storage::runningSince();
-    storage::stop(now);
-    ui::showMessage("GESTOPPT\n" + timeutil::fmtDuration(dur) + "\nHeute " + timeutil::fmtDuration(workedToday(now)),
-                    4000);
+    uint32_t start = storage::runningSince();
+    uint32_t dur = now - start;
+    storage::stop(now);  // sofort speichern, Löschen bleibt 5 s möglich
     hw::ledFlash(1);
+    if (fromWeb) {
+      ui::showMessage("GESTOPPT\n" + timeutil::fmtDuration(dur) + "\nHeute " + timeutil::fmtDuration(workedToday(now)),
+                      4000);
+    } else {
+      undoState = UNDO_OFFER;
+      undoStart = start;
+      undoDur = dur;
+      undoUntil = millis() + 5000;
+      undoShown = -1;
+    }
   } else {
+    undoState = UNDO_NONE;
     storage::start(now);
-    ui::showMessage("GESTARTET\n" + timeutil::fmtClock(now), 3000);
+    addedTotal = 0;
+    ui::showMessage("GESTARTET\n" + timeutil::fmtClock(now) + "\n\nZu sp\xC3\xA4t gestartet?\nPWR = +1 Minute", 4000);
   }
   hw::setLedBlink(storage::running());
   if (!fromWeb) ui::setView(V_MAIN);
@@ -64,6 +87,56 @@ void onTrackDoubleClick() {
     }
   }
   toggle(false);
+}
+
+// Countdown-Meldungen für das Löschen-Angebot
+void undoTick() {
+  if (undoState == UNDO_NONE) return;
+  int left = ((int32_t)(undoUntil - millis()) + 999) / 1000;
+  if (left <= 0) {
+    undoState = UNDO_NONE;
+    ui::showMessage("GESPEICHERT\n" + timeutil::fmtDuration(undoDur), 1500);
+    return;
+  }
+  if (left == undoShown || hw::menuButtonDown()) return;
+  undoShown = left;
+  if (undoState == UNDO_OFFER) {
+    ui::showMessage("Gestoppt: " + timeutil::fmtDuration(undoDur) + "\n\nL\xC3\xB6schen?\nPWR 1x\nnoch " + String(left) + " s", 0);
+  } else {
+    ui::showMessage("Wirklich\nl\xC3\xB6schen?\n\nJA = PWR 2x\nNEIN = warten (" + String(left) + ")", 0);
+  }
+}
+
+void undoClick(uint32_t clicks) {
+  if (undoState == UNDO_OFFER) {
+    undoState = UNDO_CONFIRM;  // auch bei 2x: erst Sicherheitsabfrage
+    undoUntil = millis() + 5000;
+    undoShown = -1;
+    return;
+  }
+  undoState = UNDO_NONE;
+  if (clicks == 2 && storage::deleteSession(undoStart)) {
+    ui::showMessage("GEL\xC3\x96SCHT", 2000);
+  } else {
+    ui::showMessage("GESPEICHERT\n" + timeutil::fmtDuration(undoDur), 1500);
+  }
+}
+
+// Startzeit der laufenden Erfassung um n Minuten vorverlegen
+void addMinutes(uint32_t n) {
+  uint32_t since = storage::runningSince();
+  uint32_t limit = storage::lastEnd();  // nicht in den vorherigen Eintrag hinein
+  uint32_t ns = since > n * 60 ? since - n * 60 : since;
+  if (ns < limit) ns = limit > since ? since : limit;
+  if (ns >= since) {
+    ui::showMessage("Nicht m\xC3\xB6glich\n(vorheriger\nEintrag)", 2500);
+    return;
+  }
+  storage::setRunningSince(ns);
+  if (millis() - addedAt > 4000) addedTotal = 0;  // neue Serie
+  addedTotal += (since - ns) / 60;
+  addedAt = millis();
+  ui::showMessage("+" + String(addedTotal) + " Min\nStart jetzt\n" + timeutil::fmtClock(ns), 3000);
 }
 
 void startAp() {
@@ -140,6 +213,12 @@ void powerManagement() {
 
 void onEvent(const BtnEvent &e) {
   lastActivity = millis();
+  // Löschen-Angebot nach dem Stoppen hat Vorrang
+  if (undoState != UNDO_NONE) {
+    if (e.btn == BTN_MENU && e.type == EV_CLICKS) return undoClick(e.value);
+    undoState = UNDO_NONE;  // andere Taste/Halten: Eintrag bleibt gespeichert
+    ui::clearMessage();
+  }
   // Während der Hotspot-Vorwarnung verlängert ein kurzer PWR-Druck
   if (apWarning && e.btn == BTN_MENU) {
     if (e.type == EV_CLICKS) return extendAp();
@@ -152,10 +231,12 @@ void onEvent(const BtnEvent &e) {
     if (e.type == EV_CLICKS && e.value == 2) onTrackDoubleClick();
     else if (e.type == EV_CLICKS && e.value == 1) {
       ui::clearMessage();
-      ui::goHome();
+      ui::nextView();
     }
     return;
   }
+  // Während der Erfassung: jeder kurze PWR-Druck = Start 1 Minute früher
+  if (storage::running() && e.type == EV_CLICKS) return addMinutes(e.value);
   // PWR-Taste
   switch (e.type) {
     case EV_CLICKS:
@@ -234,6 +315,7 @@ void appLoop() {
 
   if (millis() - lastBatRead > 30000) readBattery();
   dailyTimeSync();
+  undoTick();
   powerManagement();
   ui::update();
   delay(10);
