@@ -9,8 +9,10 @@ LED, Akkuanzeige, Uhrzeit per WLAN (NTP) und eigenem WLAN-Hotspot mit
 | Taste | Aktion | Funktion |
 |---|---|---|
 | **BOOT** | 2× schnell drücken | Arbeitszeit **starten / stoppen** |
-| BOOT | 1× drücken | zurück zur Hauptansicht |
+| BOOT | 1× drücken | Ansicht wechseln |
 | **PWR** | 1× drücken | Ansicht wechseln: Status → Tag → Woche → Monat (→ Hotspot) |
+| PWR | kurz drücken, **während die Zeit läuft** | Startzeit **1 Minute früher** (je Druck), falls zu spät gestartet |
+| PWR | 1× **direkt nach dem Stoppen** (5 s) | Eintrag löschen → Sicherheitsabfrage: **2× PWR = Ja**, warten = Nein |
 | PWR | 3× schnell drücken | Heim-WLAN **an/aus** (holt Datum und Uhrzeit) |
 | PWR | 5 s halten, loslassen | eigenen **Hotspot an/aus** (Übersicht + Excel-Download) |
 | PWR | 10 s halten, loslassen | **Ausschalten** (an USB: Tiefschlaf) |
@@ -22,6 +24,19 @@ Nach 60 s springt die Anzeige automatisch zur Hauptansicht zurück.
 
 **Display:** Uhrzeit, WLAN-Symbol (durchgestrichen = verbindet noch),
 „AP“ = Hotspot aktiv, Akkusymbol (mit „!“ unter 10 %).
+
+### Korrekturen direkt am Gerät
+
+* **Zu spät gestartet?** Während die Zeit läuft, verlegt jeder kurze PWR-Druck
+  den Start um 1 Minute nach vorn (nie in den vorherigen Eintrag hinein).
+  Das Display zeigt „+5 Min – Start jetzt 08:10“, auf der Hauptansicht steht
+  der Hinweis „PWR = +1 Min“. Ansicht wechseln während der Erfassung: BOOT 1×.
+* **Versehentlich gestoppt / Eintrag falsch?** Nach dem Stoppen zeigt das
+  Display 5 Sekunden „Löschen? PWR 1x“. Ein kurzer Druck fragt „Wirklich
+  löschen?“ – **2× PWR** löscht den Eintrag, sonst bleibt er nach 5 Sekunden
+  gespeichert. Der Eintrag ist ab dem Stoppen sofort gespeichert (auch bei
+  Stromausfall).
+* Heim-WLAN per PWR 3× lässt sich nur einschalten, solange keine Zeit läuft.
 
 ### Stromsparen
 
