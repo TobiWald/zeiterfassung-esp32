@@ -136,6 +136,27 @@ void handleMonth() {
   sendJson(j);
 }
 
+// Die letzten n Einträge (neueste zuerst, inkl. laufender Erfassung)
+void handleRecent() {
+  int n = server.hasArg("n") ? server.arg("n").toInt() : 5;
+  if (n < 1 || n > 50) n = 5;
+  String j = "{\"sessions\":[";
+  bool first = true;
+  if (storage::running()) {
+    j += "{\"s\":"; j += storage::runningSince(); j += ",\"e\":0,\"run\":1}";
+    first = false;
+    n--;
+  }
+  const auto &list = storage::sessions();
+  for (int i = (int)list.size() - 1; i >= 0 && n > 0; i--, n--) {
+    if (!first) j += ",";
+    first = false;
+    j += "{\"s\":"; j += list[i].start; j += ",\"e\":"; j += list[i].end; j += "}";
+  }
+  j += "]}";
+  sendJson(j);
+}
+
 bool exportRange(exporter::Range *r) {
   uint32_t now = timeutil::now();
   if (server.hasArg("y") && server.hasArg("m")) {
@@ -265,6 +286,7 @@ void begin() {
   on("/", HTTP_GET, handleRoot);
   server.on("/api/status", HTTP_GET, handleStatus);  // Hintergrund-Abfrage: keine Aktivität
   on("/api/month", HTTP_GET, handleMonth);
+  server.on("/api/recent", HTTP_GET, handleRecent);  // wird regelmäßig abgefragt: keine Aktivität
   on("/api/toggle", HTTP_POST, handleToggle);
   on("/api/settime", HTTP_POST, handleSetTime);
   on("/api/delete", HTTP_POST, handleDelete);

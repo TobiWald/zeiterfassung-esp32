@@ -54,6 +54,8 @@ button.x{background:none;color:var(--stop);font-size:20px;font-weight:700;line-h
  <div id="dev" class="hint"></div>
 </div>
 
+<div class="card"><h2>Letzte Einträge</h2><table id="recent"></table></div>
+
 <div class="card">
  <div class="nav"><button class="sec" id="prev">&#8249;</button><h2 id="mTitle" style="margin:0"></h2><button class="sec" id="next">&#8250;</button></div>
  <div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px">
@@ -78,6 +80,18 @@ button.x{background:none;color:var(--stop);font-size:20px;font-weight:700;line-h
  <p class="hint">Falls der Download im automatisch geöffneten Fenster nicht startet: im Browser
  <b>http://192.168.4.1</b> öffnen.</p>
 </div>
+<div class="card"><h2>Datum &amp; Uhrzeit</h2>
+ <p style="margin:0 0 10px">Gerät: <b id="tDev">–</b></p>
+ <form id="tForm" class="wform">
+  <div><label>Datum</label><input type="date" id="tD" required></div>
+  <div><label>Uhrzeit</label><input type="time" id="tT" required></div>
+  <button>Übernehmen</button>
+ </form>
+ <button class="sec" id="tPhone" style="margin-top:10px">Uhrzeit vom Handy übernehmen</button>
+ <div id="tMsg" class="hint"></div>
+ <p class="hint">Falls kein WLAN erreichbar ist: Datum und Uhrzeit hier von Hand einstellen.</p>
+</div>
+
 <div class="card"><h2>WLAN für Datum &amp; Uhrzeit</h2>
  <div id="wCur" class="hint" style="margin:0 0 8px"></div>
  <table id="wSaved"></table>
@@ -114,11 +128,12 @@ function ask(title,html){return new Promise(res=>{$('mT').textContent=title;$('m
  const done=v=>{$('modal').hidden=true;res(v)};$('mYes').onclick=()=>done(true);$('mNo').onclick=()=>done(false);
  $('modal').onclick=e=>{if(e.target.id=='modal')done(false)}})}
 const post=(u,data)=>api(u,{method:'POST',body:new URLSearchParams(data)});
-let st=null,cy,cm;
+let st=null,cy,cm,devOff=0;
 async function api(u,o){const r=await fetch(u,o);if(!r.ok)throw new Error(await r.text());return r.json()}
-async function setTime(){st=await api('/api/settime?t='+Math.floor(Date.now()/1000),{method:'POST'});}
+async function setTime(){st=await api('/api/settime?t='+Math.floor(Date.now()/1000),{method:'POST'});devOff=st.now*1000-Date.now();}
 async function loadStatus(){
  st=await api('/api/status');
+ devOff=st.now*1000-Date.now();
  if(!st.valid){await setTime();}
  const diff=Math.abs(st.now-Date.now()/1000);
  $('warn').innerHTML=diff>120?'<div class="warn">Die Uhr des Geräts weicht ab ('+new Date(st.now*1000).toLocaleString('de-DE')+'). <button id="fix">Uhrzeit vom Handy übernehmen</button></div>':'';
@@ -131,6 +146,15 @@ async function loadStatus(){
  $('kToday').textContent=dur(st.today||0);$('kWeek').textContent=dur(st.week||0);$('kMonth').textContent=dur(st.month||0);
  $('dev').textContent='Akku '+st.bat+' % ('+st.batV+' V)'+(st.sta?' · WLAN '+st.staIp:'')+(st.ap?' · Access Point aktiv':'')+' · '+st.count+' Einträge';
 }
+// Tabelle mit Einträgen (neueste zuerst) inkl. rotem X zum Löschen
+function sessTable(id,list){
+ $(id).innerHTML='<tr><th>Datum</th><th>Beginn</th><th>Ende</th><th class="r">Dauer</th><th></th></tr>'+(list.length?list.map(s=>
+  '<tr><td>'+WD[new Date(s.s*1000).getDay()]+' '+dd(s.s)+'</td><td>'+hm(s.s)+'</td><td>'+(s.run?'läuft':hm(s.e))+'</td><td class="r">'+dur((s.run?st.now:s.e)-s.s)+'</td><td class="r">'+(s.run?'':'<button class="x" title="Löschen" data-s="'+s.s+'" data-e="'+s.e+'">&#10005;</button>')+'</td></tr>').join(''):'<tr><td colspan="5" class="hint">Keine Einträge</td></tr>');
+ document.querySelectorAll('#'+id+' button.x').forEach(b=>b.onclick=async()=>{const a=+b.dataset.s,e=+b.dataset.e;
+  if(!await ask('Sicher löschen?','<b>'+WD[new Date(a*1000).getDay()]+' '+ddy(a)+'</b><br>'+hm(a)+' – '+hm(e)+' Uhr ('+dur(e-a)+' h)'))return;
+  try{await api('/api/delete?s='+a,{method:'POST'})}catch(x){alert(x.message)}refresh()});
+}
+async function loadRecent(){const d=await api('/api/recent?n=5');sessTable('recent',d.sessions)}
 async function loadMonth(){
  const d=await api('/api/month?y='+cy+'&m='+cm);
  $('mTitle').textContent=MN[cm-1]+' '+cy;
@@ -140,14 +164,22 @@ async function loadMonth(){
   h+='<tr class="'+(w==0||w==6?'we':'')+'"><td>'+WD[w]+' '+String(i+1).padStart(2,'0')+'.</td><td style="width:50%"><div class="bar" style="width:'+(s?Math.max(2,s/max*100):0)+'%"></div></td><td class="r">'+(s?dur(s):'')+'</td></tr>'});
  $('days').innerHTML=h;$('mDays').textContent=wd;
  $('weeks').innerHTML='<tr><th>KW</th><th>ab</th><th class="r">Stunden</th></tr>'+d.weeks.map(w=>'<tr><td>KW '+w.kw+'</td><td>'+dd(w.from)+'</td><td class="r">'+dur(w.sec)+'</td></tr>').join('');
- $('sess').innerHTML='<tr><th>Datum</th><th>Beginn</th><th>Ende</th><th class="r">Dauer</th><th></th></tr>'+(d.sessions.length?d.sessions.slice().reverse().map(s=>
-  '<tr><td>'+WD[new Date(s.s*1000).getDay()]+' '+dd(s.s)+'</td><td>'+hm(s.s)+'</td><td>'+(s.run?'läuft':hm(s.e))+'</td><td class="r">'+dur((s.run?st.now:s.e)-s.s)+'</td><td class="r">'+(s.run?'':'<button class="x" title="Löschen" data-s="'+s.s+'" data-e="'+s.e+'">&#10005;</button>')+'</td></tr>').join(''):'<tr><td colspan="5" class="hint">Keine Einträge</td></tr>');
- document.querySelectorAll('#sess button.x').forEach(b=>b.onclick=async()=>{const a=+b.dataset.s,e=+b.dataset.e;
-  if(!await ask('Sicher löschen?','<b>'+WD[new Date(a*1000).getDay()]+' '+ddy(a)+'</b><br>'+hm(a)+' – '+hm(e)+' Uhr ('+dur(e-a)+' h)'))return;
-  try{await api('/api/delete?s='+a,{method:'POST'})}catch(x){alert(x.message)}refresh()});
+ sessTable('sess',d.sessions.slice().reverse());
  const q='?y='+cy+'&m='+cm;$('xM').href='/export.xlsx'+q;$('cM').href='/export.csv'+q;
 }
-async function refresh(){try{await loadStatus();await loadMonth();await loadWifi()}catch(e){console.log(e)}}
+async function refresh(){try{await loadStatus();await loadRecent();await loadMonth();await loadWifi()}catch(e){console.log(e)}}
+// Status regelmäßig prüfen; bei neuen/geänderten Einträgen Listen nachladen
+let sig='';
+async function poll(){try{await loadStatus();const n=st.count+'/'+st.running+'/'+st.since;
+ if(n!==sig){const first=!sig;sig=n;if(!first){await loadRecent();await loadMonth()}}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+// Geräteuhr anzeigen (läuft lokal weiter)
+setInterval(()=>{if(st&&st.valid)$('tDev').textContent=new Date(Date.now()+devOff).toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});else $('tDev').textContent='nicht gestellt'},1000);
+const two=n=>String(n).padStart(2,'0');
+function fillTimeForm(){const d=new Date();$('tD').value=d.getFullYear()+'-'+two(d.getMonth()+1)+'-'+two(d.getDate());$('tT').value=two(d.getHours())+':'+two(d.getMinutes())}
+async function applyTime(t){try{st=await api('/api/settime?t='+t,{method:'POST'});$('tMsg').innerHTML='<span class="ok">✓ Uhrzeit gestellt: '+new Date(t*1000).toLocaleString('de-DE')+'</span>';refresh()}catch(x){$('tMsg').innerHTML='<span class="err">'+esc(x.message)+'</span>'}}
+$('tForm').onsubmit=e=>{e.preventDefault();const d=new Date($('tD').value+'T'+$('tT').value);if(isNaN(d))return;applyTime(Math.floor(d/1000))};
+$('tPhone').onclick=()=>{fillTimeForm();applyTime(Math.floor(Date.now()/1000))};
 $('toggle').onclick=async()=>{try{await api('/api/toggle',{method:'POST'})}catch(e){alert(e.message)}refresh()};
 $('reset').onclick=async()=>{
  if(!await ask('Sicher löschen?','Wirklich <b>alle</b> erfassten Zeiten löschen?'))return;
@@ -188,5 +220,6 @@ $('add').onsubmit=async e=>{e.preventDefault();
  if(en<=s)en=new Date(en.getTime()+864e5);
  try{await api('/api/add?s='+Math.floor(s/1000)+'&e='+Math.floor(en/1000),{method:'POST'});$('add').reset();refresh()}catch(x){alert(x.message)}};
 const now=new Date();cy=now.getFullYear();cm=now.getMonth()+1;$('aD').valueAsDate=now;
-refresh();setInterval(loadStatus,30000);
+fillTimeForm();
+refresh().then(()=>{sig=st?st.count+'/'+st.running+'/'+st.since:''});setInterval(poll,10000);
 </script></body></html>)HTML";
