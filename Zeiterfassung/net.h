@@ -1,7 +1,18 @@
 #pragma once
 #include <Arduino.h>
+#include <vector>
 
 namespace net {
+struct Network {
+  String ssid;
+  String pass;
+};
+struct ScanResult {
+  String ssid;
+  int rssi;
+  bool secure;
+};
+
 void begin();
 void loop();
 
@@ -22,6 +33,15 @@ void requestTimeSync();
 bool timeSyncPending();
 bool syncTimeBlocking(uint32_t timeoutMs);
 uint32_t lastSyncEpoch();
+
+// WLAN-Verwaltung (Webseite). Das fest eingebaute Netz aus secrets.h
+// bleibt immer als Rückfall erhalten.
+std::vector<Network> savedNetworks();
+String currentSsid();
+bool addNetwork(const String &ssid, const String &pass);  // verbindet ggf. sofort
+bool removeNetwork(const String &ssid);
+int scanStart();                       // <0 = läuft noch, >=0 = fertig
+std::vector<ScanResult> scanResults(); // holt und verwirft das Ergebnis
 
 // Kurze Meldung für das Display (leer = keine)
 String takeNotice();

@@ -47,12 +47,20 @@ Ist das Heim-WLAN eingeschaltet (PWR 3×), ist dieselbe Seite auch im
 Heimnetz unter der auf dem Display angezeigten IP erreichbar.
 
 Die Seite zeigt: Status (mit Start/Stopp-Knopf), Heute/Woche/Monat,
-Monatsübersicht mit Wochen und Tagen, alle Einträge (löschbar),
+Monatsübersicht mit Wochen und Tagen, alle Einträge (rotes ✕ hinter dem
+Eintrag → Abfrage „Sicher löschen?“ mit Datum und Uhrzeit, Ja/Nein),
 „Eintrag nachtragen“ und Downloads:
 
 * **Excel – Monat** / **Excel – alles** (`.xlsx` mit den Blättern
   *Einträge*, *Tage*, *Wochen*, *Monate* inkl. Summen)
 * **CSV – Monat** (Semikolon, deutsches Zahlenformat)
+
+**WLAN für Datum & Uhrzeit:** „Netzwerke in der Nähe suchen“ zeigt die
+WLANs mit Signalstärke an; antippen, Passwort eingeben, „Speichern & verbinden“.
+Das Gerät verbindet sich sofort und holt die Uhrzeit. Bis zu 5 Netze werden
+gespeichert (mit ✕ entfernbar); das Gerät nimmt immer das stärkste bekannte
+Netz in Reichweite. Das fest eingebaute WLAN aus `secrets.h` bleibt als
+Rückfall erhalten.
 
 Ganz unten: **Alle Daten löschen** (Reset). Löscht alle Einträge und beendet
 eine laufende Erfassung – mit doppelter Sicherheitsabfrage (Eingabe von

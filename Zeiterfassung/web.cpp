@@ -2,6 +2,7 @@
 #include <WebServer.h>
 #include <WiFi.h>
 #include "app.h"
+#include "config.h"
 #include "exporter.h"
 #include "net.h"
 #include "page.h"
@@ -29,6 +30,24 @@ bool captiveRedirect() {
   server.sendHeader("Location", "http://192.168.4.1/", true);
   server.send(302, "text/plain", "");
   return true;
+}
+
+// String als JSON-Literal (mit Anführungszeichen) anhängen
+void jsonStr(String &j, const String &v) {
+  j += '"';
+  for (char c : v) {
+    if (c == '"' || c == '\\') {
+      j += '\\';
+      j += c;
+    } else if ((uint8_t)c < 0x20) {
+      char b[8];
+      snprintf(b, sizeof(b), "\\u%04x", (uint8_t)c);
+      j += b;
+    } else {
+      j += c;
+    }
+  }
+  j += '"';
 }
 
 void sendJson(const String &s) {
@@ -60,6 +79,7 @@ void handleStatus() {
   j += ",\"batV\":"; j += String(app::batteryVoltage(), 2);
   j += ",\"sta\":"; j += net::staConnected() ? "true" : "false";
   j += ",\"staIp\":\""; j += net::staConnected() ? net::staIp() : String(""); j += "\"";
+  j += ",\"ssid\":"; jsonStr(j, net::currentSsid());
   j += ",\"ap\":"; j += net::apOn() ? "true" : "false";
   j += ",\"lastSync\":"; j += net::lastSyncEpoch();
   j += ",\"count\":"; j += (uint32_t)storage::sessions().size();
@@ -177,6 +197,54 @@ void handleReset() {
   sendJson("{\"ok\":true}");
 }
 
+void handleWifi() {
+  String j = "{\"current\":";
+  jsonStr(j, net::currentSsid());
+  j += ",\"builtin\":";
+  jsonStr(j, WIFI_SSID);
+  j += ",\"saved\":[";
+  bool first = true;
+  for (auto &w : net::savedNetworks()) {
+    if (!first) j += ",";
+    first = false;
+    jsonStr(j, w.ssid);
+  }
+  j += "]}";
+  sendJson(j);
+}
+
+void handleWifiScan() {
+  if (net::scanStart() < 0) return sendJson("{\"scanning\":true}");
+  auto saved = net::savedNetworks();
+  String j = "{\"scanning\":false,\"nets\":[";
+  bool first = true;
+  for (auto &r : net::scanResults()) {
+    bool known = r.ssid == WIFI_SSID;
+    for (auto &w : saved) known |= w.ssid == r.ssid;
+    if (!first) j += ",";
+    first = false;
+    j += "{\"ssid\":";
+    jsonStr(j, r.ssid);
+    j += ",\"rssi\":"; j += r.rssi;
+    j += ",\"secure\":"; j += r.secure ? "true" : "false";
+    j += ",\"known\":"; j += known ? "true" : "false";
+    j += "}";
+  }
+  j += "]}";
+  sendJson(j);
+}
+
+void handleWifiAdd() {
+  if (!net::addNetwork(server.arg("ssid"), server.arg("pass")))
+    return server.send(400, "text/plain", "Ung\xC3\xBCltiger Netzname oder Passwort");
+  sendJson("{\"ok\":true}");
+}
+
+void handleWifiDel() {
+  if (!net::removeNetwork(server.arg("ssid"))) return server.send(404, "text/plain", "nicht gefunden");
+  sendJson("{\"ok\":true}");
+}
+
 void handleNotFound() {
   if (captiveRedirect()) return;
   server.send(404, "text/plain", "Nicht gefunden");
@@ -195,6 +263,10 @@ void begin() {
   server.on("/api/delete", HTTP_POST, handleDelete);
   server.on("/api/add", HTTP_POST, handleAdd);
   server.on("/api/reset", HTTP_POST, handleReset);
+  server.on("/api/wifi", HTTP_GET, handleWifi);
+  server.on("/api/wifi/scan", HTTP_GET, handleWifiScan);
+  server.on("/api/wifi/add", HTTP_POST, handleWifiAdd);
+  server.on("/api/wifi/del", HTTP_POST, handleWifiDel);
   server.on("/export.xlsx", HTTP_GET, handleXlsx);
   server.on("/export.csv", HTTP_GET, handleCsv);
   // Erkennungs-URLs von Android/iOS/Windows -> Portal öffnen
