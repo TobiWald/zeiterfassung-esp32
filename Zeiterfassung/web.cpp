@@ -255,26 +255,33 @@ void handleNotFound() {
 namespace web {
 
 void begin() {
-  server.on("/", HTTP_GET, handleRoot);
-  server.on("/api/status", HTTP_GET, handleStatus);
-  server.on("/api/month", HTTP_GET, handleMonth);
-  server.on("/api/toggle", HTTP_POST, handleToggle);
-  server.on("/api/settime", HTTP_POST, handleSetTime);
-  server.on("/api/delete", HTTP_POST, handleDelete);
-  server.on("/api/add", HTTP_POST, handleAdd);
-  server.on("/api/reset", HTTP_POST, handleReset);
-  server.on("/api/wifi", HTTP_GET, handleWifi);
-  server.on("/api/wifi/scan", HTTP_GET, handleWifiScan);
-  server.on("/api/wifi/add", HTTP_POST, handleWifiAdd);
-  server.on("/api/wifi/del", HTTP_POST, handleWifiDel);
-  server.on("/export.xlsx", HTTP_GET, handleXlsx);
-  server.on("/export.csv", HTTP_GET, handleCsv);
+  // jede Anfrage zählt als Aktivität (Stromsparen)
+  auto on = [](const char *path, HTTPMethod m, void (*fn)()) {
+    server.on(path, m, [fn]() {
+      app::noteActivity();
+      fn();
+    });
+  };
+  on("/", HTTP_GET, handleRoot);
+  server.on("/api/status", HTTP_GET, handleStatus);  // Hintergrund-Abfrage: keine Aktivität
+  on("/api/month", HTTP_GET, handleMonth);
+  on("/api/toggle", HTTP_POST, handleToggle);
+  on("/api/settime", HTTP_POST, handleSetTime);
+  on("/api/delete", HTTP_POST, handleDelete);
+  on("/api/add", HTTP_POST, handleAdd);
+  on("/api/reset", HTTP_POST, handleReset);
+  on("/api/wifi", HTTP_GET, handleWifi);
+  on("/api/wifi/scan", HTTP_GET, handleWifiScan);
+  on("/api/wifi/add", HTTP_POST, handleWifiAdd);
+  on("/api/wifi/del", HTTP_POST, handleWifiDel);
+  on("/export.xlsx", HTTP_GET, handleXlsx);
+  on("/export.csv", HTTP_GET, handleCsv);
   // Erkennungs-URLs von Android/iOS/Windows -> Portal öffnen
-  server.on("/generate_204", handleRoot);
-  server.on("/gen_204", handleRoot);
-  server.on("/hotspot-detect.html", handleRoot);
-  server.on("/connecttest.txt", handleRoot);
-  server.on("/ncsi.txt", handleRoot);
+  on("/generate_204", HTTP_ANY, handleRoot);
+  on("/gen_204", HTTP_ANY, handleRoot);
+  on("/hotspot-detect.html", HTTP_ANY, handleRoot);
+  on("/connecttest.txt", HTTP_ANY, handleRoot);
+  on("/ncsi.txt", HTTP_ANY, handleRoot);
   server.onNotFound(handleNotFound);
   server.begin();
 }

@@ -13,7 +13,7 @@ LED, Akkuanzeige, Uhrzeit per WLAN (NTP) und eigenem WLAN-Hotspot mit
 | **PWR** | 1× drücken | Ansicht wechseln: Status → Tag → Woche → Monat (→ Hotspot) |
 | PWR | 3× schnell drücken | Heim-WLAN **an/aus** (holt Datum und Uhrzeit) |
 | PWR | 5 s halten, loslassen | eigenen **Hotspot an/aus** (Übersicht + Excel-Download) |
-| PWR | 10 s halten, loslassen | **Ausschalten** (nur im Akkubetrieb, an USB bleibt es an) |
+| PWR | 10 s halten, loslassen | **Ausschalten** (an USB: Tiefschlaf) |
 
 Beim Halten zeigt das Display an, was beim Loslassen passiert.
 Nach 60 s springt die Anzeige automatisch zur Hauptansicht zurück.
@@ -22,6 +22,20 @@ Nach 60 s springt die Anzeige automatisch zur Hauptansicht zurück.
 
 **Display:** Uhrzeit, WLAN-Symbol (durchgestrichen = verbindet noch),
 „AP“ = Hotspot aktiv, Akkusymbol (mit „!“ unter 10 %).
+
+### Stromsparen
+
+* **Automatisch aus nach 3 Minuten ohne Aktivität** – sofern keine Arbeitszeit
+  läuft und der Hotspot aus ist. Als Aktivität zählen Tastendrücke und Aktionen
+  auf der Webseite. Auf dem Display steht danach „AUS (Stromsparen)“.
+  **Einschalten mit der PWR-Taste.**
+* Im Akkubetrieb wird die Versorgung komplett getrennt. An USB geht das Gerät
+  in den Tiefschlaf (PWR weckt es auf).
+* **Hotspot endet nach 2 Minuten:** Es piept dreimal und das Display zählt
+  15 Sekunden herunter. **PWR kurz drücken = +2 Minuten.** Erst wenn der Hotspot
+  aus ist, beginnt der 3-Minuten-Timer zum Ausschalten.
+* Mit eingestecktem Akku läuft die eingebaute Uhr (RTC) auch im ausgeschalteten
+  Zustand weiter.
 
 ### Uhrzeit
 

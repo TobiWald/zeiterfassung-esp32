@@ -161,7 +161,7 @@ String fmtClock(time_t t) {
 
 String fmtDate(time_t t) {
   struct tm r = local(t);
-  char b[16];
+  char b[40];
   snprintf(b, sizeof(b), "%02d.%02d.%04d", r.tm_mday, r.tm_mon + 1, r.tm_year + 1900);
   return String(b);
 }

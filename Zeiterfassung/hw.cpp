@@ -1,4 +1,6 @@
 #include "hw.h"
+#include <driver/rtc_io.h>
+#include <esp_sleep.h>
 #include "config.h"
 
 namespace {
@@ -109,6 +111,8 @@ void earlyInit() {
   digitalWrite(PIN_VBAT_HOLD, HIGH);  // Akku-Versorgung halten
   pinMode(PIN_AUDIO_PWR, OUTPUT);
   digitalWrite(PIN_AUDIO_PWR, HIGH);  // Audio-Codec aus
+  pinMode(PIN_PA_EN, OUTPUT);
+  digitalWrite(PIN_PA_EN, LOW);       // Verstärker aus
   pinMode(PIN_LED, OUTPUT);
   ledWrite(false);
   pinMode(PIN_BTN_TRACK, INPUT_PULLUP);
@@ -159,5 +163,17 @@ void powerOff() {
 }
 
 void powerHold() { digitalWrite(PIN_VBAT_HOLD, HIGH); }
+
+void deepSleep() {
+  ledWrite(false);
+  uint32_t t0 = millis();
+  while (digitalRead(PIN_BTN_MENU) == LOW && millis() - t0 < 10000) delay(10);  // Taste loslassen
+  delay(50);
+  rtc_gpio_pullup_en((gpio_num_t)PIN_BTN_MENU);
+  rtc_gpio_pulldown_dis((gpio_num_t)PIN_BTN_MENU);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+  esp_sleep_enable_ext1_wakeup(1ULL << PIN_BTN_MENU, ESP_EXT1_WAKEUP_ANY_LOW);
+  esp_deep_sleep_start();
+}
 
 }  // namespace hw

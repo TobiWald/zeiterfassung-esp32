@@ -47,6 +47,9 @@ int main() {
   ui::showMessage("GESTOPPT\n5:34\nHeute 8:38"); ui::drawNow(); dump("9b_msg_stop");
   ui::showMessage("AUS\n\nZum Einschalten\nPWR dr\xC3\xBC" "cken"); ui::drawNow(); dump("9c_msg_off");
   ui::showMessage("WLAN verbunden\n192.168.178.57"); ui::drawNow(); dump("9d_msg_wlan");
+  ui::showMessage("Hotspot aus\nin 15 s\n\nPWR kurz dr\xC3\xBC" "cken\n= +2 Minuten"); ui::drawNow(); dump("9e_msg_apwarn");
+  ui::showMessage("Hotspot\n+2 Minuten"); ui::drawNow(); dump("9f_msg_apext");
+  ui::showMessage("AUS\n(Stromsparen)\n\nZum Einschalten\nPWR dr\xC3\xBC" "cken"); ui::drawNow(); dump("9g_msg_autooff");
   ui::clearMessage();
 
   struct tm lt = timeutil::local(now);

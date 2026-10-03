@@ -26,4 +26,5 @@ float batteryVoltage();
 int batteryPercent(float v);
 void powerOff();              // trennt Akku (USB-Betrieb läuft weiter)
 void powerHold();             // Akku-Selbsthaltung wieder aktivieren
+void deepSleep();             // Tiefschlaf, Aufwachen mit PWR-Taste (USB-Betrieb)
 }

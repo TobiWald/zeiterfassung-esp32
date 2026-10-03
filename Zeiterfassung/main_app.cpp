@@ -1,7 +1,9 @@
 // Hauptlogik: Tasten auswerten, Zeiterfassung steuern, Anzeige aktualisieren
 #include "main_app.h"
 #include "app.h"
+#include "audio.h"
 #include "config.h"
+#include "epd.h"
 #include "hw.h"
 #include "net.h"
 #include "storage.h"
@@ -14,6 +16,13 @@ float batV = 0;
 int batPct = 0;
 uint32_t lastBatRead = 0;
 int lastDailySyncDay = -1;
+
+// Stromsparen
+uint32_t lastActivity = 0;  // letzte Aktivität (Taste, Webseite, Erfassung, Hotspot)
+uint32_t apDeadline = 0;    // Hotspot-Ende (vor der Vorwarnung)
+bool apWarning = false;     // Vorwarnung läuft
+uint32_t apWarnUntil = 0;
+int apWarnShown = -1;       // angezeigter Countdown-Wert
 
 void readBattery() {
   batV = hw::batteryVoltage();
@@ -57,20 +66,88 @@ void onTrackDoubleClick() {
   toggle(false);
 }
 
-void powerOffSequence() {
+void startAp() {
+  net::setAp(true);
+  apDeadline = millis() + AP_TIMEOUT_MS;
+  apWarning = false;
+  ui::setView(V_AP);
+}
+
+void stopAp(const char *msg) {
+  net::setAp(false);
+  apWarning = false;
+  ui::clearMessage();
+  ui::showMessage(msg, 2500);
+  ui::setView(V_MAIN);
+  lastActivity = millis();  // ab jetzt läuft der Ausschalt-Timer
+}
+
+void extendAp() {
+  apDeadline = millis() + AP_TIMEOUT_MS;
+  apWarning = false;
+  ui::clearMessage();
+  ui::showMessage("Hotspot\n+2 Minuten", 2000);
+}
+
+// Ausschalten: im Akkubetrieb wird die Versorgung getrennt, an USB geht
+// das Gerät in den Tiefschlaf. Einschalten/Aufwecken jeweils mit PWR.
+void powerOffSequence(bool automatic) {
   net::setAp(false);
   net::setSta(false);
-  ui::showMessage("AUS\n\nZum Einschalten\nPWR dr\xC3\xBC" "cken", 0);
+  hw::setLedBlink(false);
+  ui::showMessage(automatic ? "AUS\n(Stromsparen)\n\nZum Einschalten\nPWR dr\xC3\xBC" "cken"
+                            : "AUS\n\nZum Einschalten\nPWR dr\xC3\xBC" "cken",
+                  0);
   ui::drawNow(true);
+  epd::sleep();
   delay(300);
   hw::powerOff();
-  delay(2500);
-  // Läuft noch -> USB-Versorgung
-  hw::powerHold();
-  ui::showMessage("USB-Betrieb\nGer\xC3\xA4t bleibt an", 3000);
+  delay(1500);
+  // Läuft noch -> USB-Versorgung: Tiefschlaf
+  hw::deepSleep();
+}
+
+void powerManagement() {
+  uint32_t ms = millis();
+
+  // Hotspot: nach 2 Minuten Vorwarnung, 15 s später aus
+  if (net::apOn()) {
+    if (!apWarning && (int32_t)(ms - apDeadline) >= 0) {
+      apWarning = true;
+      apWarnUntil = ms + AP_WARN_MS;
+      apWarnShown = -1;
+      audio::beep(3);
+    }
+    if (apWarning) {
+      int left = ((int32_t)(apWarnUntil - ms) + 999) / 1000;
+      if (left <= 0) {
+        stopAp("Hotspot AUS");
+      } else if (left != apWarnShown && !hw::menuButtonDown()) {
+        apWarnShown = left;
+        ui::showMessage("Hotspot aus\nin " + String(left) + " s\n\nPWR kurz dr\xC3\xBC" "cken\n= +2 Minuten", 0);
+      }
+    }
+  }
+
+  // Ausschalten nach Inaktivität – nicht während Erfassung, Hotspot,
+  // Uhrzeit-Abgleich oder gedrückter Taste
+  if (storage::running() || net::apOn() || net::timeSyncPending() || hw::menuButtonDown()) {
+    lastActivity = ms;
+  } else if (ms - lastActivity >= AUTO_OFF_MS) {
+    powerOffSequence(true);
+  }
 }
 
 void onEvent(const BtnEvent &e) {
+  lastActivity = millis();
+  // Während der Hotspot-Vorwarnung verlängert ein kurzer PWR-Druck
+  if (apWarning && e.btn == BTN_MENU) {
+    if (e.type == EV_CLICKS) return extendAp();
+    if (e.type == EV_HOLD_REACHED) {  // Halten: Warnung beenden, normal weiter
+      apDeadline = millis() + AP_TIMEOUT_MS;
+      apWarning = false;
+    }
+  }
   if (e.btn == BTN_TRACK) {
     if (e.type == EV_CLICKS && e.value == 2) onTrackDoubleClick();
     else if (e.type == EV_CLICKS && e.value == 1) {
@@ -99,14 +176,11 @@ void onEvent(const BtnEvent &e) {
     case EV_HOLD_RELEASED:
       ui::clearMessage();
       if (e.value >= POWEROFF_HOLD_MS) {
-        powerOffSequence();
+        powerOffSequence(false);
       } else if (net::apOn()) {
-        net::setAp(false);
-        ui::showMessage("Hotspot AUS", 2500);
-        ui::setView(V_MAIN);
+        stopAp("Hotspot AUS");
       } else {
-        net::setAp(true);
-        ui::setView(V_AP);
+        startAp();
       }
       break;
   }
@@ -126,6 +200,7 @@ void dailyTimeSync() {
 namespace app {
 void toggleTracking() { toggle(true); }
 void requestRedraw() { ui::requestRedraw(); }
+void noteActivity() { lastActivity = millis(); }
 void dataReset() {
   hw::setLedBlink(false);
   ui::showMessage("Alle Daten\ngel\xC3\xB6scht", 4000);
@@ -146,6 +221,7 @@ void appSetup() {
   hw::begin();
   hw::setLedBlink(storage::running());
   if (!timeutil::valid()) net::requestTimeSync();
+  lastActivity = millis();
 }
 
 void appLoop() {
@@ -158,6 +234,7 @@ void appLoop() {
 
   if (millis() - lastBatRead > 30000) readBattery();
   dailyTimeSync();
+  powerManagement();
   ui::update();
   delay(10);
 }

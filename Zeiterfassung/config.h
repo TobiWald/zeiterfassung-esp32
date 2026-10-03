@@ -40,6 +40,11 @@
 #define POWEROFF_HOLD_MS 10000
 #define VIEW_TIMEOUT_MS  60000 // zurück zur Hauptansicht
 
+// ---- Stromsparen -----------------------------------------------------
+#define AUTO_OFF_MS   (3 * 60 * 1000UL) // ausschalten nach Inaktivität
+#define AP_TIMEOUT_MS (2 * 60 * 1000UL) // Hotspot-Laufzeit (und Verlängerung)
+#define AP_WARN_MS    15000             // Vorwarnung vor Hotspot-Ende
+
 // ---- Board-Pins (aus Waveshare V2 Beispielcode) ----------------------
 #define PIN_EPD_DC   10
 #define PIN_EPD_CS   11
@@ -53,6 +58,14 @@
 #define PIN_AUDIO_PWR 42 // HIGH = Audio aus
 #define PIN_LED       3  // grüne LED, LOW = an
 #define PIN_BAT_ADC   4  // Akku-Spannung / 2
+
+// Audio: ES8311-Codec + NS4150B-Verstärker
+#define PIN_I2S_MCLK 14
+#define PIN_I2S_BCLK 15
+#define PIN_I2S_WS   38
+#define PIN_I2S_DOUT 45
+#define PIN_PA_EN    46  // HIGH = Verstärker an
+#define ES8311_ADDR  0x18
 
 #define PIN_I2C_SDA 47
 #define PIN_I2C_SCL 48
